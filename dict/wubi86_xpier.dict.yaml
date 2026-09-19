@@ -1,0 +1,29 @@
+# Xpier 自有词条（以前叫「个人码表加字」，现在归这里管）。
+#
+# 怎么加字加词：往文件末尾加一行就行，格式是「字 ⇥ 码 ⇥ 权重」，
+# 字和码之间是 Tab，不是空格；权重不写也行（四码单字默认见面，
+# 想盖过主码表同码词就写大，比如 10000）。
+# 以 𡋤 为例（U+212E4，⿰土尽，土f + 尽一n二y + 尽末u = fnyu）：
+#
+#   𡋤	fnyu
+#
+# 加完跑：make wubi86-data && make dist && make install
+# （make debug 不管码表拷贝，这一步不能省；装完切回输入法等半分钟重建）。
+#
+# 原理：构建时这个文件被拷进 data/plum，主词库的 import_tables 会多一行
+# wubi86_xpier（tools/patch_wubi_overlay_import.py 保证），部署时一起编译。
+# 上游码表仓库保持纯净，不用 fork —— 这就是全部家当，丢了这个文件加的字就没了。
+---
+name: wubi86_xpier
+version: "1"
+sort: by_weight
+columns:
+  - text
+  - code
+  - weight
+...
+
+## 生僻字（用户反馈加字）：主码表没有，进了这里就是正式词条
+# 𡋤 U+212E4 = 土+尽（⿰土尽，cjkvi-ids 实测），86 全码 fnyu（土f + 尽一n二y + 尽末u；对照：赆=mnyu、烬=onyu）
+𡋤	fnyu
+

@@ -1,0 +1,67 @@
+# Xpier 在线打包：手动点 Run workflow，或发 release / 打 v* tag。
+# 产物是 ad-hoc 签名的 arm64 包（GitHub 托管 macOS runner 是 Apple Silicon）。
+# 装机要过 Gatekeeper：访达里右键打开一次。没有 Apple Developer 证书，不做公证。
+name: build
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  WUBI_REPO: https://github.com/KyleBing/rime-wubi86-jidian.git
+  WUBI_REF: master
+  WUBI86_DIR: ${{ github.workspace }}/rime-wubi86-jidian
+
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - name: 取代码
+        uses: actions/checkout@v4
+
+      - name: 取五笔方案
+        run: git clone --depth 1 --branch "$WUBI_REF" "$WUBI_REPO" "$WUBI86_DIR"
+
+      - name: 装 cmake / boost
+        run: brew install cmake boost
+
+      - name: Xcode 版本
+        run: xcodebuild -version && xcode-select -p
+
+      - name: 装前自检
+        run: make requirements-check
+
+      - name: 编引擎
+        run: make librime
+
+      - name: 备数据
+        run: make wubi86-data
+
+      - name: 打包 dist
+        run: make dist
+
+      - name: 压缩产物
+        run: ditto -c -k --sequesterRsrc --keepParent dist/Xpier.app Xpier-macOS-arm64.zip
+
+      - name: 上传 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Xpier-macOS-arm64
+          path: Xpier-macOS-arm64.zip
+
+      - name: 挂到 GitHub Release
+        if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          gh release view "$tag" >/dev/null 2>&1 || gh release create "$tag" --title "$tag" --generate-notes
+          gh release upload "$tag" Xpier-macOS-arm64.zip --clobber
