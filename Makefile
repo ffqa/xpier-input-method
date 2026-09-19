@@ -164,7 +164,7 @@ tools/tis-name: tools/tis-name.swift
 # 探针轨 librime（动态库，插件静态合并）：只给 rime_probe 链接用，
 # 和 App 轨（build/，插件外置，随包发布）是两套目录，互不干扰。
 # 顺序：先 make librime（备好 deps 里的 opencc 等），再编这个。
-librime/build-rime/lib/librime.1.dylib:
+librime/build-rime/lib/librime.1.dylib: $(RIME_DEPS)
 	cd librime && cmake . -Bbuild-rime \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=ON \

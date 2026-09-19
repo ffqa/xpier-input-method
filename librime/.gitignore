@@ -4,6 +4,13 @@ debug/
 dist/
 data/*
 include/*
+!include/darts.h
+!include/COPYING.darts-clone
+!include/utf8.h
+!include/utf8/
+!include/utf8/**
+!include/X11/
+!include/X11/**
 lib/*
 bin/*
 share/*
