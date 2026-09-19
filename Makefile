@@ -35,18 +35,18 @@ PLUM_DATA_OUTPUT = plum/output/*.*
 PLUM_OPENCC_OUTPUT = plum/output/opencc/*.*
 RIME_PACKAGE_INSTALLER = plum/rime-install
 
-# 五笔码表来源（构建时拷进 data/plum）。默认上游地址；发布前换成你自己的
-# fork（含𡋤那几个本地提交），否则编出来的包没有𡋤（见 README 作者待办）。
-# 缺目录时自动 clone，用户只管 make。
+# 五笔码表来源（构建时拷进 data/plum）。clone 到仓库内 third_party/，
+# 不放到外面当兄弟目录。目录 gitignore，缺了 make 会自己拉上游纯版。
+# 本地微调和加字走构建期补丁 + dict/ overlay。
 WUBI_REPO ?= https://github.com/KyleBing/rime-wubi86-jidian.git
 WUBI_REF ?= master
-WUBI86_DIR ?= ../rime-wubi86-jidian
+WUBI86_DIR ?= third_party/rime-wubi86-jidian
 
-# 码表兄弟目录不在就自动 clone（发布流 make 的第一步），免得用户手动对路径。
 .PHONY: wubi86-checkout
 wubi86-checkout:
 	@if [ -f "$(WUBI86_DIR)/wubi86_jidian.schema.yaml" ]; then echo "码表目录已在：$(WUBI86_DIR)"; \
-	else echo "码表目录不在，自动 clone（$(WUBI_REPO) @ $(WUBI_REF)）…"; \
+	else echo "码表目录不在，自动 clone 到仓库内（$(WUBI_REPO) @ $(WUBI_REF)）…"; \
+	mkdir -p "$(dir $(WUBI86_DIR))"; \
 	git clone --depth 1 --branch "$(WUBI_REF)" "$(WUBI_REPO)" "$(WUBI86_DIR)"; fi
 
 INSTALL_NAME_TOOL = $(shell xcrun -find install_name_tool)

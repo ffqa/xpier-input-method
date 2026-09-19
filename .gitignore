@@ -50,3 +50,5 @@ __pycache__/
 .github/workflows/pull-request-ci.yml
 .github/workflows/release-ci.yml
 .gitmodules
+# 上游极点五笔码表（make 会 clone 到这里，不进 git）
+third_party/

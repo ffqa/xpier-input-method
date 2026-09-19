@@ -47,10 +47,13 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 git clone https://github.com/ffqa/xpier-input-method.git
 cd xpier-input-method
 brew install cmake boost
-make            # 自动备依赖 + 编引擎 + 取码表 + 打包
+make            # 自动备依赖 + clone 码表到 third_party/ + 编引擎 + 打包
 make test       # 不装机：探针断言 tffu/tzfu/zni
 make install    # 拷到 ~/Library/Input Methods/Xpier.app（必须本人执行）
 ```
+
+码表在仓库内 `third_party/rime-wubi86-jidian/`（gitignore，不进 git），
+不会写到外面当兄弟目录。
 
 成了的标志：末尾 `✔ 打包完成：…/dist/Xpier.app`。
 

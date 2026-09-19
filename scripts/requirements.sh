@@ -113,53 +113,30 @@ check_sub
 # plum/output 是构建产物（make -C plum 时下载），不是源码：缺了只提示，不断言失败。
 if [ -e "$ROOT/plum/output" ]; then info "plum 输出已在（构建时跳过下载）"
 else info "plum 输出还没编（构建时下载，要联网一次）"; fi
-if [ -d "$ROOT/.git" ]; then
-  # git 树：源码可以是 submodule，也可以直接内嵌（本仓库走内嵌，CI 才能开箱编）。
-  if [ "$NEED_SUB" -eq 0 ]; then ok "引擎源码齐（librime/plum/Sparkle）"
-  else
-    if [ -f "$ROOT/.gitmodules" ]; then
-      ask "跑 git submodule update --init --recursive？" git -C "$ROOT" submodule update --init --recursive
-      check_sub
-      [ "$NEED_SUB" -eq 0 ] && ok "引擎源码齐（刚拉下来）" || bad "源码还是不全（手动跑 git submodule update --init --recursive 看报错）"
-    else
-      bad "源码缺文件（librime/plum/Sparkle）"
-    fi
-  fi
-  # git submodule status 前缀：空格=一致，-=没 checkout，+=SHA 对不上。
-  # 空输出 = 不是 submodule（源码已内嵌），不能当成“没 checkout”。
-  case "$(git -C "$ROOT" submodule status librime 2>/dev/null)" in
-    "-"*) bad "librime 子模块没 checkout（前面那步没做？）" ;;
-    "+"*) bad "librime checkout 的版本和仓库记录的不一致（混用会出灵异问题）" ;;
-    "") ok "librime 已内嵌（不走 submodule SHA 校验）" ;;
-    *) ok "librime 已 checkout（SHA 以 .gitmodules 指的 fork 为准）" ;;
-  esac
+if [ "$NEED_SUB" -eq 0 ]; then
+  ok "引擎源码齐（librime/plum/Sparkle 已内嵌）"
 else
-  # 快照包（解压即用，没有 .git）：只认文件在不在，不校验 SHA。
-  # 缺文件就是包解坏了，git 也救不回来（指针指的上游没有本地提交），直接报错。
-  if [ "$NEED_SUB" -eq 0 ]; then ok "子模块源码齐（快照包，跳过 SHA 校验）"
-  else bad "源码缺文件（包没解全？删掉重解一次）"; fi
+  bad "源码缺文件（librime/plum/Sparkle）"
 fi
 
-echo "== 5/8 五笔码表兄弟目录 =="
-# 路径跟 Makefile 的 WUBI86_DIR 同源（默认 ../rime-wubi86-jidian），CI 会指到别处。
-# 上游纯版就行：本地的 4 处 schema 微调 + 自有词表由构建期补丁现打
-#（tools/patch_wubi_local_tweaks.py、patch_wubi_overlay_import.py + dict/），
-# 不用 fork 码表仓库。缺目录就 clone 上游。
-WUBI_DIR="${WUBI86_DIR:-$ROOT/../rime-wubi86-jidian}"
+echo "== 5/8 五笔码表 =="
+# 码表放在仓库内 third_party/，不放到外面当兄弟目录（免得碰到别的 xpier）。
+# 上游纯版：本地 schema 微调和加字由构建期补丁 + dict/ overlay 现打。
+# 这个目录 gitignore，make / requirements --yes 会自己 clone。
+WUBI_DIR="${WUBI86_DIR:-$ROOT/third_party/rime-wubi86-jidian}"
 if [ -f "$WUBI_DIR/wubi86_jidian.schema.yaml" ]; then
   ok "$WUBI_DIR 在"
 else
-  if ask "现在 clone 上游仓库？" true; then
+  if ask "现在 clone 上游码表到 third_party/？" true; then
     url=""
     if [ "$TTY" -eq 1 ] && [ "$AUTO" -eq 0 ]; then
       printf "    码表仓库地址（回车用 KyleBing 上游纯版）："
       read -r url </dev/tty || true
     fi
-    # 非交互（--yes 或无 tty）直接用默认地址；read 失败时 url 为空也一样。
     [ -n "${url:-}" ] || url="https://github.com/KyleBing/rime-wubi86-jidian.git"
+    mkdir -p "$(dirname "$WUBI_DIR")"
     git clone "$url" "$WUBI_DIR" || true
   fi
-  # 修完复查：clone 下来就不算失败
   if [ -f "$WUBI_DIR/wubi86_jidian.schema.yaml" ]; then
     ok "$WUBI_DIR 在（刚 clone 下来）"
   else

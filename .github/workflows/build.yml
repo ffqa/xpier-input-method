@@ -14,11 +14,6 @@ on:
 permissions:
   contents: write
 
-env:
-  WUBI_REPO: https://github.com/KyleBing/rime-wubi86-jidian.git
-  WUBI_REF: master
-  WUBI86_DIR: ${{ github.workspace }}/rime-wubi86-jidian
-
 jobs:
   build:
     runs-on: macos-14
@@ -27,11 +22,11 @@ jobs:
       - name: 取代码
         uses: actions/checkout@v4
 
-      - name: 取五笔方案
-        run: git clone --depth 1 --branch "$WUBI_REF" "$WUBI_REPO" "$WUBI86_DIR"
-
       - name: 装 cmake / boost
         run: brew install cmake boost
+
+      - name: 取五笔方案（仓库内 third_party/）
+        run: make wubi86-checkout
 
       - name: Xcode 版本
         run: xcodebuild -version && xcode-select -p
