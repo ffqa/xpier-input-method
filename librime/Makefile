@@ -32,7 +32,10 @@ prefix ?= $(DESTDIR)/usr
 endif
 
 ifndef NOPARALLEL
-export MAKEFLAGS+=" -j$$(( $$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || getconf NPROCESSORS_ONLN 2>/dev/null || echo 8) + 1)) "
+# 必须用 $(shell ...)：写在 Makefile 顶层时 $$() 不会进 shell，
+# 会变成 MAKEFLAGS=-j（没有数字），Xcode 的 make 直接报错。
+NPROC := $(shell sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 8)
+export MAKEFLAGS += -j$(NPROC)
 endif
 
 debug install-debug uninstall-debug test-debug: build ?= debug

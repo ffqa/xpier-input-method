@@ -60,7 +60,19 @@ $(RIME_LIBRARY):
 $(RIME_DEPS):
 	$(MAKE) -C librime deps
 
+# 目录改过名时 CMakeCache 还记着旧绝对路径，cmake 会拒跑。
+define wipe-stale-librime-cmake
+	@if [ -f $(1)/CMakeCache.txt ]; then \
+	  old=`sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' $(1)/CMakeCache.txt`; \
+	  if [ -n "$$old" ] && [ "$$old" != "$(CURDIR)/librime" ]; then \
+	    echo "CMake 缓存还记着旧目录 $$old，清掉 $(1)"; \
+	    rm -rf $(1); \
+	  fi; \
+	fi
+endef
+
 librime: $(RIME_DEPS)
+	$(call wipe-stale-librime-cmake,librime/build)
 	$(MAKE) -C librime release install
 	$(MAKE) copy-rime-binaries
 
@@ -165,6 +177,7 @@ tools/tis-name: tools/tis-name.swift
 # 和 App 轨（build/，插件外置，随包发布）是两套目录，互不干扰。
 # 顺序：先 make librime（备好 deps 里的 opencc 等），再编这个。
 librime/build-rime/lib/librime.1.dylib: $(RIME_DEPS)
+	$(call wipe-stale-librime-cmake,librime/build-rime)
 	cd librime && cmake . -Bbuild-rime \
 		-DCMAKE_BUILD_TYPE=Release \
 		-DBUILD_SHARED_LIBS=ON \
