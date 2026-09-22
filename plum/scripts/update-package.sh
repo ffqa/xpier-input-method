@@ -14,9 +14,16 @@ if [[ -z "${package_dir}" ]]; then
     exit 1
 fi
 
+git_is_repo() {
+    # 确保当前目录自身就是独立 git 仓库（有 .git），避免误识别外层工程的 .git
+    if ! [[ -e .git ]]; then
+        return 1
+    fi
+    command git rev-parse --git-dir > /dev/null 2>&1
+}
+
 git_current_branch() {
-    if ! command git rev-parse 2> /dev/null
-    then
+    if ! git_is_repo; then
         # not a git repository
         return 2
     fi
@@ -31,8 +38,7 @@ git_current_branch() {
 }
 
 git_default_branch() {
-    if ! command git rev-parse 2> /dev/null
-    then
+    if ! git_is_repo; then
         return 2
     fi
     local ref="$(command git symbolic-ref refs/remotes/origin/HEAD 2> /dev/null)"
@@ -60,6 +66,9 @@ fetch_all_branches() {
 
 switch_branch() {
     local target_branch="$1"
+    if [[ -z "${target_branch}" ]]; then
+        return 0
+    fi
     if [[ -z "${branch}" ]]; then
         echo $(warning 'WARNING:') "'${package_dir}' was on" \
              $(print_option "${current_branch:-(detached HEAD)}") 'instead of' $(print_option "${target_branch}")
@@ -77,6 +86,9 @@ if [[ $? -gt 1 ]]; then
 fi
 if [[ -z "${branch}" ]]; then
     target_branch="$(git_default_branch)"
+    if [[ -z "${target_branch}" ]]; then
+        target_branch="${current_branch:-master}"
+    fi
 else
     target_branch="${branch}"
 fi
