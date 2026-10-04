@@ -77,7 +77,12 @@ switch_branch() {
     git checkout "${target_branch}" || exit 1
 }
 
-pushd "${package_dir}" &> /dev/null
+# pushd 失败时不会中止脚本，且错误被丢弃；此时 cwd 仍是调用方目录，
+# 下面的 git_is_repo 会把外层工程误认成包仓库并对其执行 fetch/reset。
+if ! pushd "${package_dir}" &> /dev/null; then
+    echo $(warning 'WARNING:') "package dir not found: '${package_dir}', skipped"
+    exit 1
+fi
 
 current_branch="$(git_current_branch)"
 if [[ $? -gt 1 ]]; then
@@ -86,13 +91,20 @@ if [[ $? -gt 1 ]]; then
 fi
 if [[ -z "${branch}" ]]; then
     target_branch="$(git_default_branch)"
+    # 拿不到 origin/HEAD 时退回当前分支，而不是猜 master/main：
+    # 仓库实际分支名可能是 trunk 等任意名字，猜错会让 git checkout 失败并中断安装。
+    # detached HEAD 时 current_branch 为空，target_branch 随之留空，由下面的守卫跳过。
     if [[ -z "${target_branch}" ]]; then
-        target_branch="${current_branch:-master}"
+        target_branch="${current_branch}"
     fi
 else
     target_branch="${branch}"
 fi
-if [[ "${current_branch}" != "${target_branch}" ]]; then
+if [[ -z "${target_branch}" ]]; then
+    # 既无默认分支又无当前分支名（如 detached HEAD 且无 origin/HEAD）：
+    # 不做任何 git 操作，否则会拿空分支名拼出 "origin/" 这种非法 ref 而中断安装。
+    echo $(warning 'WARNING:') "cannot determine branch of '${package_dir}', skipped updating"
+elif [[ "${current_branch}" != "${target_branch}" ]]; then
     switch_branch "${target_branch}"
 elif [[ -z "${option_no_update}" ]]; then
     git fetch --recurse-submodules && (
